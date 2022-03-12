@@ -11,6 +11,7 @@
 #include <arpa/inet.h>
 #include <sys/wait.h>
 #include <cmath>
+#include <algorithm>
 
 #define localhost "127.0.0.1"
 #define port_UDP "24308"
