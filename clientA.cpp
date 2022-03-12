@@ -11,6 +11,9 @@
 #include <arpa/inet.h>
 #include <sys/wait.h>
 
+#define localhost "127.0.0.1"
+#define port_TCP_A "25308"
+
 int main(int argc,char *argv[])
 {
   if (argc!=2)
@@ -34,7 +37,7 @@ int main(int argc,char *argv[])
   hints.ai_socktype = SOCK_STREAM;  //TCP Socket
 
   //load up server's address information with getaddrinfo()
-  getaddrinfo("127.0.0.1", "25308", &hints, &res);
+  getaddrinfo(localhost, port_TCP_A, &hints, &res);
 
   printf("The client A is up and running.\n");
 

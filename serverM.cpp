@@ -12,6 +12,7 @@
 #include <sys/wait.h>
 #include <cmath>
 #include <algorithm>
+using namespace std;
 
 #define localhost "127.0.0.1"
 #define port_UDP "24308"
@@ -20,7 +21,7 @@
 
 void Backend(char* buf)
 {
-  print("Received: %s\n",buf);
+  printf("Received: %s\n",buf);
   sprintf(buf,"ServerM received message successfully");
   return;
 }
