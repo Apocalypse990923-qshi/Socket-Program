@@ -10,7 +10,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <sys/wait.h>
-#include <math.h>
+#include <cmath>
 
 #define localhost "127.0.0.1"
 #define port_UDP "24308"
@@ -126,6 +126,7 @@ int main(int argc,char *argv[])
             perror("Failed to send!");
             return -1;
           }
+          close(childfd_A);
         }
       }
     }
@@ -145,10 +146,11 @@ int main(int argc,char *argv[])
             perror("Failed to send!");
             return -1;
           }
+          close(childfd_B);
         }
       }
     }
   }
 
-  close(listenfd); close(new_fd);
+  close(listenfd_A);close(listenfd_B);
 }
