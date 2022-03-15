@@ -18,7 +18,7 @@ int main(int argc,char *argv[])
 {
   if (argc!=2)
   {
-    printf("Plese input appropriate arguments!");
+    printf("Plese input appropriate arguments!\n");
     return -1;
   }
 
@@ -52,10 +52,10 @@ int main(int argc,char *argv[])
   //Communicate with Server
   char buffer[1024];
 
-  if (argc==2) //CHECK WALLET: ./clientA <username1>
+  if (argc==2) //CHECK WALLET: ./clientB <username1>
   {
     memset(buffer,0,sizeof(buffer));
-    sprintf(buffer,"%s",argv[1]);
+    sprintf(buffer,"1 %s",argv[1]);
     if (send(sockfd,buffer,strlen(buffer),0)<=0) // send message
     {
       perror("Failed to send!");
