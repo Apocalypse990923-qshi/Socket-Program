@@ -16,7 +16,7 @@
 
 int main(int argc,char *argv[])
 {
-  if (argc!=2)
+  if (argc!=2 && argc!=4)
   {
     printf("Plese input appropriate arguments!\n");
     return -1;
@@ -52,9 +52,8 @@ int main(int argc,char *argv[])
   //Communicate with Server
   char buffer[1024];
 
-  if (argc==2) //CHECK WALLET: ./clientB <username1>
+  if (argc==2) //CHECK WALLET: ./client <username1>
   {
-    memset(buffer,0,sizeof(buffer));
     sprintf(buffer,"1 %s",argv[1]);
     if (send(sockfd,buffer,strlen(buffer),0)<=0) // send message
     {
@@ -62,7 +61,7 @@ int main(int argc,char *argv[])
       return -1;
     }
     printf("%s sent a balance enquiry request to the main server.\n",argv[1]);
-
+    
     memset(buffer,0,sizeof(buffer));
     if (recv(sockfd,buffer,sizeof(buffer),0)<=0) // receive message from serverM
     {
@@ -71,9 +70,24 @@ int main(int argc,char *argv[])
     }
     printf("Received: %s\n", buffer);
   }
-
-
-
+  else if (argc==4) //TXCOINS: ./client <username2> <username1> <amount>
+  {
+    sprintf(buffer,"2 %s %s %s",argv[1],argv[2],argv[3]);
+    if (send(sockfd,buffer,strlen(buffer),0)<=0) // send message
+    {
+      perror("Failed to send!");
+      return -1;
+    }
+    printf("%s has requested to transfer %s coins to %s.\n",argv[1],argv[3],argv[2]);
+    
+    memset(buffer,0,sizeof(buffer));
+    if (recv(sockfd,buffer,sizeof(buffer),0)<=0) // receive message from serverM
+    {
+      perror("Receiving error!");
+      return -1;
+    }
+    printf("Received: %s\n", buffer);
+  }
   // Close socket。
   close(sockfd);
 }

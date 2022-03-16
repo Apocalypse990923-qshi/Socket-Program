@@ -77,6 +77,36 @@ void Load(string user)
    infile.close();
 }
 
+void Serial_Number()
+{
+   int latest=0;
+   infile.open(file_path,ios::in);
+   int index=0;
+   while(!infile.eof())
+   {
+      switch(index % 4)
+      {
+         case 0:
+            infile >> t.num;
+            break;
+         case 1:
+            infile >> t.sender;
+            break;
+         case 2:
+            infile >> t.recver;
+            break;
+         case 3:
+            infile >> t.amount;
+            if(t.num>latest) latest=t.num;
+      }
+      index++;
+   }
+   infile.close();
+   
+   sprintf(buffer,"%d",latest);
+   if(sendto(sockfd,buffer,strlen(buffer),0,res->ai_addr,res->ai_addrlen)<=0) perror("Failed to send!");
+}
+
 void Check_Wallet(string user)
 {
    int balance=0;
@@ -95,6 +125,65 @@ void Check_Wallet(string user)
       }
       sprintf(buffer,"%d",balance);
    }
+   if(sendto(sockfd,buffer,strlen(buffer),0,res->ai_addr,res->ai_addrlen)<=0) perror("Failed to send!");
+}
+
+void Save(string msg)
+{
+   int i=0;
+   for(;i<msg.length();i++)
+   {
+      if(msg[i]==' ') break;
+   }
+   int new_num=atoi((msg.substr(0,i)).c_str());
+   int len_num=i;
+   for(i=len_num+1;i<msg.length();i++)
+   {
+      if(msg[i]==' ') break;
+   }
+   string new_sender = msg.substr(len_num+1,i-len_num-1);
+   for(i=len_num+new_sender.length()+2;i<msg.length();i++)
+   {
+      if(msg[i]==' ') break;
+   }
+   string new_recver = msg.substr(len_num+new_sender.length()+2,i-len_num-new_sender.length()-2);
+   int new_amount=atoi((msg.substr(len_num+new_sender.length()+new_recver.length()+3,msg.length()-len_num-new_sender.length()-new_recver.length()-3)).c_str());
+   
+   record.clear();
+   infile.open(file_path,ios::in);
+   int index=0;
+   while(!infile.eof())
+   {
+      switch(index % 4)
+      {
+         case 0:
+            infile >> t.num;
+            break;
+         case 1:
+            infile >> t.sender;
+            break;
+         case 2:
+            infile >> t.recver;
+            break;
+         case 3:
+            infile >> t.amount;
+            record.push_back(t);
+      }
+      index++;
+   }
+   infile.close();
+   
+   outfile.open(file_path, ios::out);
+   outfile<<new_num<<" "<<new_sender<<" "<<new_recver<<" "<<new_amount<<endl;
+   while(record.size()>0)
+   {
+      t=record[record.size()-1];
+      outfile<<t.num<<" "<<t.sender<<" "<<t.recver<<" "<<t.amount<<endl;
+      record.pop_back();
+   }
+   outfile.close();
+   
+   sprintf(buffer, "Log Saved");
    if(sendto(sockfd,buffer,strlen(buffer),0,res->ai_addr,res->ai_addrlen)<=0) perror("Failed to send!");
 }
 
@@ -138,6 +227,15 @@ int main(int argc,char *argv[])
             {
                string name(buffer, 2, strlen(buffer)-2);
                Check_Wallet(name);
+               break;
+            }
+            case 2:     //latest serial number request
+               Serial_Number();
+               break;
+            case 3:     //log entry
+            {
+               string data(buffer, 2, strlen(buffer)-2);
+               Save(data);
                break;
             }
             default:

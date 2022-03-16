@@ -25,12 +25,12 @@ using namespace std;
 
 int listenfd_A, listenfd_B, childfd_A, childfd_B, sockfd;
 struct addrinfo hints, *res, *A_addr, *B_addr, *C_addr;
+char buffer[1024];  //store message
 
 int Check_Wallet(string user)
 {
    bool user_exist=false;
    int balance=1000;  //initial balance
-   char buffer[1024];
    
    sprintf(buffer,"1 %s",user.c_str());
    if(sendto(sockfd,buffer,strlen(buffer),0,A_addr->ai_addr,A_addr->ai_addrlen)<=0) perror("Failed to send!");
@@ -87,11 +87,96 @@ int Check_Wallet(string user)
    return balance;
 }
 
+int TXCoins(string msg)
+{
+   int i=0;
+   for(;i<msg.length();i++)
+   {
+      if(msg[i]==' ') break;
+   }
+   string sender = msg.substr(0,i);
+   for(i=sender.length()+1;i<msg.length();i++)
+   {
+      if(msg[i]==' ') break;
+   }
+   string recver = msg.substr(sender.length()+1,i-sender.length()-1);
+   int amount=atoi((msg.substr(sender.length()+recver.length()+2,msg.length()-sender.length()-recver.length()-2)).c_str());
+   
+   int sender_balance = Check_Wallet(sender);
+   int recver_balance = Check_Wallet(recver);
+   if(sender_balance < 0) return -1; //sender does not exist
+   else if(sender_balance - amount < 0) return -2; //insufficient balance
+   if(recver_balance < 0) return -3; //recver does not exist
+   
+   //request serverA,B,C for latest serial number
+   int latest=0;
+   sprintf(buffer,"2");
+   if(sendto(sockfd,buffer,strlen(buffer),0,A_addr->ai_addr,A_addr->ai_addrlen)<=0) perror("Failed to send!");
+   else
+   {
+      memset(buffer,0,sizeof(buffer));
+      if(recvfrom(sockfd,buffer,sizeof(buffer),0,A_addr->ai_addr,&(A_addr->ai_addrlen))<=0) perror("Receiving serverA error!");
+      else
+      {
+         latest=max(latest,atoi(buffer));
+      }
+   }
+   
+   sprintf(buffer,"2");
+   if(sendto(sockfd,buffer,strlen(buffer),0,B_addr->ai_addr,B_addr->ai_addrlen)<=0) perror("Failed to send!");
+   else
+   {
+      memset(buffer,0,sizeof(buffer));
+      if(recvfrom(sockfd,buffer,sizeof(buffer),0,B_addr->ai_addr,&(B_addr->ai_addrlen))<=0) perror("Receiving serverB error!");
+      else
+      {
+         latest=max(latest,atoi(buffer));
+      }
+   }
+   
+   sprintf(buffer,"2");
+   if(sendto(sockfd,buffer,strlen(buffer),0,C_addr->ai_addr,C_addr->ai_addrlen)<=0) perror("Failed to send!");
+   else
+   {
+      memset(buffer,0,sizeof(buffer));
+      if(recvfrom(sockfd,buffer,sizeof(buffer),0,C_addr->ai_addr,&(C_addr->ai_addrlen))<=0) perror("Receiving serverC error!");
+      else
+      {
+         latest=max(latest,atoi(buffer));
+      }
+   }
+   
+   srand((int)time(NULL));
+   int r=rand()%3;  //randomly choose a server to store this transaction
+   struct addrinfo *rand_addr;
+   switch(r)
+   {
+      case 0:
+         rand_addr=A_addr;
+         break;
+      case 1:
+         rand_addr=B_addr;
+         break;
+      case 2:
+         rand_addr=C_addr;
+   }
+   
+   sprintf(buffer,"3 %d %s %s %d",latest+1,sender.c_str(),recver.c_str(),amount);
+   if(sendto(sockfd,buffer,strlen(buffer),0,rand_addr->ai_addr,rand_addr->ai_addrlen)<=0) perror("Failed to send!");
+   else
+   {  //receive confirmation
+      memset(buffer,0,sizeof(buffer));
+      if(recvfrom(sockfd,buffer,sizeof(buffer),0,rand_addr->ai_addr,&(rand_addr->ai_addrlen))<=0) perror("Receiving random server error!");
+      else sender_balance=Check_Wallet(sender);
+   }
+      
+   return sender_balance;
+}
+
 void Backend(char* data)
 {
   //printf("Received: %s\n",data);
   //sprintf(data,"ServerM received message successfully");
-  
   
   int operation=int(data[0]-'0');
   switch(operation)
@@ -100,6 +185,12 @@ void Backend(char* data)
       {
          string name(data, 2, strlen(data)-2);
          sprintf(data,"%d",Check_Wallet(name));
+         break;
+      }
+      case 2:     //TXCOINS
+      {
+         string message(data, 2, strlen(data)-2);
+         sprintf(data,"%d",TXCoins(message));
          break;
       }
       default:
@@ -208,7 +299,6 @@ int main(int argc,char *argv[])
 
   int  socklen=sizeof(struct sockaddr_in);
   struct sockaddr_in clientA_addr, clientB_addr;  // address information of client socket
-  char buffer[1024];  //store message
 
   while(1)
   {
