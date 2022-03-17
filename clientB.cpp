@@ -10,6 +10,8 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <sys/wait.h>
+#include <iostream>
+using namespace std;
 
 #define localhost "127.0.0.1"
 #define port_TCP_B "26308"
@@ -52,23 +54,44 @@ int main(int argc,char *argv[])
   //Communicate with Server
   char buffer[1024];
 
-  if (argc==2) //CHECK WALLET: ./client <username1>
+  if (argc==2)
   {
-    sprintf(buffer,"1 %s",argv[1]);
-    if (send(sockfd,buffer,strlen(buffer),0)<=0) // send message
+    string s(argv[1]);
+    if(s=="TXLIST")     //TXLIST
     {
-      perror("Failed to send!");
-      return -1;
+      sprintf(buffer,"3");
+      if (send(sockfd,buffer,strlen(buffer),0)<=0) // send message
+      {
+         perror("Failed to send!");
+         return -1;
+      }
+      
+      memset(buffer,0,sizeof(buffer));
+      if (recv(sockfd,buffer,sizeof(buffer),0)<=0) // receive message from serverM
+      {
+         perror("Receiving error!");
+         return -1;
+      }
+      printf("Received: %s\n", buffer);
     }
-    printf("%s sent a balance enquiry request to the main server.\n",argv[1]);
+    else    //CHECK WALLET: ./client <username1>
+    {
+      sprintf(buffer,"1 %s",argv[1]);
+      if (send(sockfd,buffer,strlen(buffer),0)<=0) // send message
+      {
+         perror("Failed to send!");
+         return -1;
+      }
+      printf("%s sent a balance enquiry request to the main server.\n",argv[1]);
     
-    memset(buffer,0,sizeof(buffer));
-    if (recv(sockfd,buffer,sizeof(buffer),0)<=0) // receive message from serverM
-    {
-      perror("Receiving error!");
-      return -1;
+      memset(buffer,0,sizeof(buffer));
+      if (recv(sockfd,buffer,sizeof(buffer),0)<=0) // receive message from serverM
+      {
+         perror("Receiving error!");
+         return -1;
+      }
+      printf("Received: %s\n", buffer);
     }
-    printf("Received: %s\n", buffer);
   }
   else if (argc==4) //TXCOINS: ./client <username2> <username1> <amount>
   {

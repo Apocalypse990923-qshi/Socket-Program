@@ -13,6 +13,8 @@
 #include <math.h>
 #include <algorithm>
 #include <iostream>
+#include <fstream>
+#include <vector>
 using namespace std;
 
 #define localhost "127.0.0.1"
@@ -23,9 +25,27 @@ using namespace std;
 #define port_TCP_A "25308"
 #define port_TCP_B "26308"
 
+struct transaction
+{
+   int num;
+   string sender;
+   string recver;
+   int amount;
+};
+
+bool compare(struct transaction a,struct transaction b)
+{
+   return a.num>b.num;
+}
+
 int listenfd_A, listenfd_B, childfd_A, childfd_B, sockfd;
 struct addrinfo hints, *res, *A_addr, *B_addr, *C_addr;
 char buffer[1024];  //store message
+
+vector <struct transaction> record;
+struct transaction t;
+ifstream infile;
+ofstream outfile;
 
 int Check_Wallet(string user)
 {
@@ -173,6 +193,70 @@ int TXCoins(string msg)
    return sender_balance;
 }
 
+void Add_to_record(char* data)
+{
+   string msg(data);
+   int i=0;
+   for(;i<msg.length();i++)
+   {
+      if(msg[i]==' ') break;
+   }
+   t.num=atoi((msg.substr(0,i)).c_str());
+   int len_num=i;
+   for(i=len_num+1;i<msg.length();i++)
+   {
+      if(msg[i]==' ') break;
+   }
+   t.sender = msg.substr(len_num+1,i-len_num-1);
+   for(i=len_num+t.sender.length()+2;i<msg.length();i++)
+   {
+      if(msg[i]==' ') break;
+   }
+   t.recver = msg.substr(len_num+t.sender.length()+2,i-len_num-t.sender.length()-2);
+   t.amount=atoi((msg.substr(len_num+t.sender.length()+t.recver.length()+3,msg.length()-len_num-t.sender.length()-t.recver.length()-3)).c_str());
+   record.push_back(t);
+}
+
+void Receive_list(struct addrinfo *server_addr)
+{
+   int n;      //how many transactions stored in server
+   sprintf(buffer,"4");
+   if(sendto(sockfd,buffer,strlen(buffer),0,server_addr->ai_addr,server_addr->ai_addrlen)<=0) perror("Failed to send!");
+   else
+   {
+      memset(buffer,0,sizeof(buffer));
+      if(recvfrom(sockfd,buffer,sizeof(buffer),0,server_addr->ai_addr,&(server_addr->ai_addrlen))<=0) perror("Receiving error!");
+      else
+      {
+         n=atoi(buffer);
+         for(int i=0;i<n;i++)
+         {
+            memset(buffer,0,sizeof(buffer));
+            if(recvfrom(sockfd,buffer,sizeof(buffer),0,server_addr->ai_addr,&(server_addr->ai_addrlen))<=0) perror("Receiving error!");
+            else Add_to_record(buffer);
+         }
+      }
+   }
+}
+
+void TXLIST()
+{
+   record.clear();
+   Receive_list(A_addr);
+   Receive_list(B_addr);
+   Receive_list(C_addr);
+   
+   sort(record.begin(),record.end(),compare);   //sort list
+   outfile.open("alichain.txt", ios::out);   //save in "alichain.txt"
+   while(record.size()>0)
+   {
+      t=record[record.size()-1];
+      outfile<<t.num<<" "<<t.sender<<" "<<t.recver<<" "<<t.amount<<endl;
+      record.pop_back();
+   }
+   outfile.close();
+}
+
 void Backend(char* data)
 {
   //printf("Received: %s\n",data);
@@ -193,14 +277,16 @@ void Backend(char* data)
          sprintf(data,"%d",TXCoins(message));
          break;
       }
+      case 3:
+      {
+         TXLIST();
+         sprintf(data,"TXLIST Complete");
+         break;
+      }
       default:
          sprintf(data,"Invalid operation!");
          printf("Invalid operation!\n");
   }
-  
-  
-  
-  
   return;
 }
 

@@ -37,6 +37,33 @@ struct transaction t;
 ifstream infile;
 ofstream outfile;
 
+void Load_All()
+{
+   record.clear();
+   infile.open(file_path,ios::in);
+   int index=0;
+   while(!infile.eof())
+   {
+      switch(index % 4)
+      {
+         case 0:
+            infile >> t.num;
+            break;
+         case 1:
+            infile >> t.sender;
+            break;
+         case 2:
+            infile >> t.recver;
+            break;
+         case 3:
+            infile >> t.amount;
+            record.push_back(t);
+      }
+      index++;
+   }
+   infile.close();
+}
+
 void Load(string user)
 {
    record.clear();
@@ -149,30 +176,7 @@ void Save(string msg)
    string new_recver = msg.substr(len_num+new_sender.length()+2,i-len_num-new_sender.length()-2);
    int new_amount=atoi((msg.substr(len_num+new_sender.length()+new_recver.length()+3,msg.length()-len_num-new_sender.length()-new_recver.length()-3)).c_str());
    
-   record.clear();
-   infile.open(file_path,ios::in);
-   int index=0;
-   while(!infile.eof())
-   {
-      switch(index % 4)
-      {
-         case 0:
-            infile >> t.num;
-            break;
-         case 1:
-            infile >> t.sender;
-            break;
-         case 2:
-            infile >> t.recver;
-            break;
-         case 3:
-            infile >> t.amount;
-            record.push_back(t);
-      }
-      index++;
-   }
-   infile.close();
-   
+   Load_All();
    outfile.open(file_path, ios::out);
    outfile<<new_num<<" "<<new_sender<<" "<<new_recver<<" "<<new_amount<<endl;
    while(record.size()>0)
@@ -185,6 +189,22 @@ void Save(string msg)
    
    sprintf(buffer, "Log Saved");
    if(sendto(sockfd,buffer,strlen(buffer),0,res->ai_addr,res->ai_addrlen)<=0) perror("Failed to send!");
+}
+
+void TXLIST()
+{
+   Load_All();
+   sprintf(buffer,"%d",record.size());
+   if(sendto(sockfd,buffer,strlen(buffer),0,res->ai_addr,res->ai_addrlen)<=0) perror("Failed to send!");
+   else
+   {
+      for(int i=0;i<record.size();i++)
+      {
+         t=record[i];
+         sprintf(buffer,"%d %s %s %d",t.num,t.sender.c_str(),t.recver.c_str(),t.amount);
+         if(sendto(sockfd,buffer,strlen(buffer),0,res->ai_addr,res->ai_addrlen)<=0) perror("Failed to send!");
+      }
+   }
 }
 
 int main(int argc,char *argv[])
@@ -238,6 +258,9 @@ int main(int argc,char *argv[])
                Save(data);
                break;
             }
+            case 4:     //TXLIST
+               TXLIST();
+               break;
             default:
                printf("Invalid operation!\n");
          }
