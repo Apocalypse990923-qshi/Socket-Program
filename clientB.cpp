@@ -16,9 +16,47 @@ using namespace std;
 #define localhost "127.0.0.1"
 #define port_TCP_B "26308"
 
+void Statistics(string msg)
+{
+   if(msg=="-1")
+   {
+      printf("no statistics results of username\n");
+      return;  
+   }
+   else if(msg=="0") return;
+   
+   int i=0;
+   for(;i<msg.length();i++)
+   {
+      if(msg[i]==' ') break;
+   }
+   int rank=atoi((msg.substr(0,i)).c_str());
+   int len_rank=i;
+   for(i=len_rank+1;i<msg.length();i++)
+   {
+      if(msg[i]==' ') break;
+   }
+   string recver = msg.substr(len_rank+1,i-len_rank-1);
+   for(i=len_rank+recver.length()+2;i<msg.length();i++)
+   {
+      if(msg[i]==' ') break;
+   }
+   int num = atoi(msg.substr(len_rank+recver.length()+2,i-len_rank-recver.length()-2).c_str());
+   int len_num=i-len_rank-recver.length()-2;
+   for(i=len_rank+recver.length()+len_num+3;i<msg.length();i++)
+   {
+      if(msg[i]==' ') break;
+   }
+   int amount=atoi(msg.substr(len_rank+recver.length()+len_num+3,i-len_rank-recver.length()-len_num-3).c_str());
+   printf("%d\t%s\t%d\t%d\n",rank,recver.c_str(),num,amount);
+   
+   Statistics(msg.substr(i+1,msg.length()-i-1));
+   return;
+}
+
 int main(int argc,char *argv[])
 {
-  if (argc!=2 && argc!=4)
+  if (argc!=2 && argc!=3 && argc!=4)
   {
     printf("Plese input appropriate arguments!\n");
     return -1;
@@ -77,7 +115,7 @@ int main(int argc,char *argv[])
     else    //CHECK WALLET: ./client <username1>
     {
       sprintf(buffer,"1 %s",argv[1]);
-      if (send(sockfd,buffer,strlen(buffer),0)<=0) // send message
+      if (send(sockfd,buffer,strlen(buffer),0)<=0)
       {
          perror("Failed to send!");
          return -1;
@@ -85,7 +123,7 @@ int main(int argc,char *argv[])
       printf("%s sent a balance enquiry request to the main server.\n",argv[1]);
     
       memset(buffer,0,sizeof(buffer));
-      if (recv(sockfd,buffer,sizeof(buffer),0)<=0) // receive message from serverM
+      if (recv(sockfd,buffer,sizeof(buffer),0)<=0)
       {
          perror("Receiving error!");
          return -1;
@@ -93,10 +131,33 @@ int main(int argc,char *argv[])
       printf("Received: %s\n", buffer);
     }
   }
+  else if (argc==3)  //./client <username> stats
+  {
+      sprintf(buffer,"4 %s",argv[1]);
+      if (send(sockfd,buffer,strlen(buffer),0)<=0)
+      {
+         perror("Failed to send!");
+         return -1;
+      }
+      
+      memset(buffer,0,sizeof(buffer));
+      if(recv(sockfd,buffer,sizeof(buffer),0)<=0)
+      {
+         perror("Receiving error!");
+         return -1;
+      }
+      else
+      {
+         printf("Received: %s\n",buffer);
+         printf("Rank\tUsername\tNumOfTrans\tAmount\n");
+         string data(buffer);
+         Statistics(data);
+      }
+  }
   else if (argc==4) //TXCOINS: ./client <username2> <username1> <amount>
   {
     sprintf(buffer,"2 %s %s %s",argv[1],argv[2],argv[3]);
-    if (send(sockfd,buffer,strlen(buffer),0)<=0) // send message
+    if (send(sockfd,buffer,strlen(buffer),0)<=0)
     {
       perror("Failed to send!");
       return -1;
@@ -104,7 +165,7 @@ int main(int argc,char *argv[])
     printf("%s has requested to transfer %s coins to %s.\n",argv[1],argv[3],argv[2]);
     
     memset(buffer,0,sizeof(buffer));
-    if (recv(sockfd,buffer,sizeof(buffer),0)<=0) // receive message from serverM
+    if (recv(sockfd,buffer,sizeof(buffer),0)<=0)
     {
       perror("Receiving error!");
       return -1;

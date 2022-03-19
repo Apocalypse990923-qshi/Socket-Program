@@ -15,6 +15,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <map>
 using namespace std;
 
 #define localhost "127.0.0.1"
@@ -27,9 +28,15 @@ using namespace std;
 
 struct transaction
 {
-   int num;
+   int num;    //serial number
    string sender;
    string recver;
+   int amount;
+};
+
+struct stat
+{
+   int num;    //number of transactions made with user
    int amount;
 };
 
@@ -38,7 +45,8 @@ bool compare(struct transaction a,struct transaction b)
    return a.num>b.num;
 }
 
-int listenfd_A, listenfd_B, childfd_A, childfd_B, sockfd;
+int listenfd_A, listenfd_B, childfd_A, childfd_B, sockfd, childfd;
+bool flag;  //which client is communicating with
 struct addrinfo hints, *res, *A_addr, *B_addr, *C_addr;
 char buffer[1024];  //store message
 
@@ -257,6 +265,88 @@ void TXLIST()
    outfile.close();
 }
 
+void Receive_stats(struct addrinfo *server_addr, string username)
+{
+   int n;      //how many transactions of user stored in server
+   sprintf(buffer,"5 %s",username.c_str());
+   if(sendto(sockfd,buffer,strlen(buffer),0,server_addr->ai_addr,server_addr->ai_addrlen)<=0) perror("Failed to send!");
+   else
+   {
+      memset(buffer,0,sizeof(buffer));
+      if(recvfrom(sockfd,buffer,sizeof(buffer),0,server_addr->ai_addr,&(server_addr->ai_addrlen))<=0) perror("Receiving error!");
+      else
+      {
+         n=atoi(buffer);
+         for(int i=0;i<n;i++)
+         {
+            memset(buffer,0,sizeof(buffer));
+            if(recvfrom(sockfd,buffer,sizeof(buffer),0,server_addr->ai_addr,&(server_addr->ai_addrlen))<=0) perror("Receiving error!");
+            else Add_to_record(buffer);
+         }
+      }
+   }
+}
+
+int Statistics(string user)
+{
+   if(Check_Wallet(user)<0) return -1; //user does not exist
+   
+   record.clear();
+   Receive_stats(A_addr,user);
+   Receive_stats(B_addr,user);
+   Receive_stats(C_addr,user);
+
+   map<string, struct stat> stats_map;
+   while(record.size()>0)
+   {
+      t=record[record.size()-1];
+      string other;
+      if(t.sender==user) other=t.recver;
+      else if(t.recver==user)
+      {
+         other=t.sender;
+         t.amount*=(-1);
+      }
+      
+      if(stats_map.count(other))
+      {
+         stats_map[other].amount+=t.amount;
+         stats_map[other].num++;
+      }
+      else
+      {
+         struct stat s;
+         s.num=1;
+         s.amount=t.amount;
+         stats_map.insert(pair<string, struct stat>(other,s));
+      }
+      record.pop_back();
+   }
+   map<string, struct stat>::iterator iter;
+   for(iter = stats_map.begin(); iter != stats_map.end(); iter++)
+   {
+      t.num=(iter->second).num;
+      t.sender=user;
+      t.recver=iter->first;
+      t.amount=(iter->second).amount;
+      record.push_back(t);
+   }
+   sort(record.begin(),record.end(),compare);
+   
+   sprintf(buffer,"%d",record.size());
+   printf("record size=%d\n",record.size());
+
+   for(int i=0;i<record.size();i++)
+   {
+      t=record[i];
+      printf("%d %s %d %d\n",i+1,t.recver.c_str(),t.num,t.amount);
+      sprintf(buffer,"%d %s %d %d ",i+1,t.recver.c_str(),t.num,t.amount);
+      if(send(childfd,buffer,strlen(buffer),0)<=0) perror("Failed to send!");
+   }  
+   
+   return 0; //success
+}
+
 void Backend(char* data)
 {
   //printf("Received: %s\n",data);
@@ -277,10 +367,16 @@ void Backend(char* data)
          sprintf(data,"%d",TXCoins(message));
          break;
       }
-      case 3:
+      case 3:     //TXLIST
       {
          TXLIST();
          sprintf(data,"TXLIST Complete");
+         break;
+      }
+      case 4:     //stats
+      {
+         string name(data, 2, strlen(data)-2);
+         sprintf(data,"%d",Statistics(name));
          break;
       }
       default:
@@ -403,8 +499,9 @@ int main(int argc,char *argv[])
         if(recv(childfd_A,buffer,sizeof(buffer),0)<=0) perror("Receiving A error!");
         else
         {
+          childfd=childfd_A;
           Backend(buffer);
-          if (send(childfd_A,buffer,strlen(buffer),0)<=0) // send message
+          if (send(childfd_A,buffer,strlen(buffer),0)<=0)
           {
             perror("Failed to send!");
           }
@@ -422,8 +519,9 @@ int main(int argc,char *argv[])
         if(recv(childfd_B,buffer,sizeof(buffer),0)<=0) perror("Receiving B error!");
         else
         {
+          childfd=childfd_B;
           Backend(buffer);
-          if (send(childfd_B,buffer,strlen(buffer),0)<=0) // send message
+          if (send(childfd_B,buffer,strlen(buffer),0)<=0)
           {
             perror("Failed to send!");
           }

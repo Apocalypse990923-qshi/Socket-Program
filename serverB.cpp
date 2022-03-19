@@ -207,6 +207,22 @@ void TXLIST()
    }
 }
 
+void Statistics(string user)
+{
+   Load(user);
+   sprintf(buffer,"%d",record.size());
+   if(sendto(sockfd,buffer,strlen(buffer),0,res->ai_addr,res->ai_addrlen)<=0) perror("Failed to send!");
+   else
+   {
+      for(int i=0;i<record.size();i++)
+      {
+         t=record[i];
+         sprintf(buffer,"%d %s %s %d",t.num,t.sender.c_str(),t.recver.c_str(),t.amount);
+         if(sendto(sockfd,buffer,strlen(buffer),0,res->ai_addr,res->ai_addrlen)<=0) perror("Failed to send!");
+      }
+   }
+}
+
 int main(int argc,char *argv[])
 {
   if ( (sockfd = socket(AF_INET,SOCK_DGRAM,0))==-1) //Create UDP Socket
@@ -261,6 +277,12 @@ int main(int argc,char *argv[])
             case 4:     //TXLIST
                TXLIST();
                break;
+            case 5:
+            {
+               string name(buffer, 2, strlen(buffer)-2);
+               Statistics(name);
+               break;
+            }
             default:
                printf("Invalid operation!\n");
          }
