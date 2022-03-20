@@ -250,12 +250,15 @@ int main(int argc,char *argv[])
   
   getaddrinfo(localhost, port_UDP, &hints, &res);
   
+  printf("The ServerC is up and running using UDP on port %d.\n",atoi(port_server_C));
+  
   while (1)
   {
       memset(buffer,0,sizeof(buffer));
       if(recvfrom(sockfd,buffer,sizeof(buffer),0,res->ai_addr,&(res->ai_addrlen))<=0) perror("Receiving serverM error!");
       else
       {
+         printf("The ServerC received a request from the Main Server.\n");
          int operation=int(buffer[0]-'0');
          switch(operation)
          {
@@ -286,10 +289,8 @@ int main(int argc,char *argv[])
             default:
                printf("Invalid operation!\n");
          }
-         
-         
+         printf("The ServerC finished sending the response to the Main Server.\n");
       }
-   
   }
   
   close(sockfd);

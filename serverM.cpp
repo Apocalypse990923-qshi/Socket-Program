@@ -46,8 +46,9 @@ bool compare(struct transaction a,struct transaction b)
 }
 
 int listenfd_A, listenfd_B, childfd_A, childfd_B, sockfd, childfd;
-bool flag;  //which client is communicating with
 struct addrinfo hints, *res, *A_addr, *B_addr, *C_addr;
+int  socklen=sizeof(struct sockaddr_in);
+struct sockaddr_in clientA_addr, clientB_addr;  // address information of client socket
 char buffer[1024];  //store message
 
 vector <struct transaction> record;
@@ -55,7 +56,7 @@ struct transaction t;
 ifstream infile;
 ofstream outfile;
 
-int Check_Wallet(string user)
+int Check_Wallet(string user,bool flag)
 {
    bool user_exist=false;
    int balance=1000;  //initial balance
@@ -64,10 +65,12 @@ int Check_Wallet(string user)
    if(sendto(sockfd,buffer,strlen(buffer),0,A_addr->ai_addr,A_addr->ai_addrlen)<=0) perror("Failed to send!");
    else
    {
+      if(flag) printf("The main server sent a request to server A.\n");
       memset(buffer,0,sizeof(buffer));
       if(recvfrom(sockfd,buffer,sizeof(buffer),0,A_addr->ai_addr,&(A_addr->ai_addrlen))<=0) perror("Receiving serverA error!");
       else
       {
+         if(flag) printf("The main server received transactions from Server A using UDP over port %d.\n",atoi(port_server_A));
          if(buffer[0]!='!') //user exists in server
          {
             user_exist=true;
@@ -80,10 +83,12 @@ int Check_Wallet(string user)
    if(sendto(sockfd,buffer,strlen(buffer),0,B_addr->ai_addr,B_addr->ai_addrlen)<=0) perror("Failed to send!");
    else
    {
+      if(flag) printf("The main server sent a request to server B.\n");
       memset(buffer,0,sizeof(buffer));
       if(recvfrom(sockfd,buffer,sizeof(buffer),0,B_addr->ai_addr,&(B_addr->ai_addrlen))<=0) perror("Receiving serverB error!");
       else
       {
+         if(flag) printf("The main server received transactions from Server B using UDP over port %d.\n",atoi(port_server_B));
          if(buffer[0]!='!') //user exists in server
          {
             user_exist=true;
@@ -96,10 +101,12 @@ int Check_Wallet(string user)
    if(sendto(sockfd,buffer,strlen(buffer),0,C_addr->ai_addr,C_addr->ai_addrlen)<=0) perror("Failed to send!");
    else
    {
+      if(flag) printf("The main server sent a request to server C.\n");
       memset(buffer,0,sizeof(buffer));
       if(recvfrom(sockfd,buffer,sizeof(buffer),0,C_addr->ai_addr,&(C_addr->ai_addrlen))<=0) perror("Receiving serverC error!");
       else
       {
+         if(flag) printf("The main server received transactions from Server C using UDP over port %d.\n",atoi(port_server_C));
          if(buffer[0]!='!') //user exists in server
          {
             user_exist=true;
@@ -115,7 +122,7 @@ int Check_Wallet(string user)
    return balance;
 }
 
-int TXCoins(string msg)
+pair<int,int> TXCoins(string msg,int port)
 {
    int i=0;
    for(;i<msg.length();i++)
@@ -129,12 +136,14 @@ int TXCoins(string msg)
    }
    string recver = msg.substr(sender.length()+1,i-sender.length()-1);
    int amount=atoi((msg.substr(sender.length()+recver.length()+2,msg.length()-sender.length()-recver.length()-2)).c_str());
+   printf("The main server received from %s to transfer %d coins to %s using TCP over port %d.\n",sender.c_str(),amount,recver.c_str(),port);
    
-   int sender_balance = Check_Wallet(sender);
-   int recver_balance = Check_Wallet(recver);
-   if(sender_balance < 0) return -1; //sender does not exist
-   else if(sender_balance - amount < 0) return -2; //insufficient balance
-   if(recver_balance < 0) return -3; //recver does not exist
+   int sender_balance = Check_Wallet(sender,false);
+   int recver_balance = Check_Wallet(recver,false);
+   if(sender_balance<0 && recver_balance<0) return make_pair(-4,0); //neither exists
+   if(sender_balance < 0) return make_pair(-1,0); //sender does not exist
+   if(recver_balance < 0) return make_pair(-3,0); //recver does not exist
+   if(sender_balance - amount < 0) return make_pair(-2,sender_balance); //insufficient balance
    
    //request serverA,B,C for latest serial number
    int latest=0;
@@ -142,10 +151,12 @@ int TXCoins(string msg)
    if(sendto(sockfd,buffer,strlen(buffer),0,A_addr->ai_addr,A_addr->ai_addrlen)<=0) perror("Failed to send!");
    else
    {
+      printf("The main server sent a request to server A.\n");
       memset(buffer,0,sizeof(buffer));
       if(recvfrom(sockfd,buffer,sizeof(buffer),0,A_addr->ai_addr,&(A_addr->ai_addrlen))<=0) perror("Receiving serverA error!");
       else
       {
+         printf("The main server received the feedback from server A using UDP over port %d.\n",atoi(port_server_A));
          latest=max(latest,atoi(buffer));
       }
    }
@@ -154,10 +165,12 @@ int TXCoins(string msg)
    if(sendto(sockfd,buffer,strlen(buffer),0,B_addr->ai_addr,B_addr->ai_addrlen)<=0) perror("Failed to send!");
    else
    {
+      printf("The main server sent a request to server B.\n");
       memset(buffer,0,sizeof(buffer));
       if(recvfrom(sockfd,buffer,sizeof(buffer),0,B_addr->ai_addr,&(B_addr->ai_addrlen))<=0) perror("Receiving serverB error!");
       else
       {
+         printf("The main server received the feedback from server B using UDP over port %d.\n",atoi(port_server_B));
          latest=max(latest,atoi(buffer));
       }
    }
@@ -166,10 +179,12 @@ int TXCoins(string msg)
    if(sendto(sockfd,buffer,strlen(buffer),0,C_addr->ai_addr,C_addr->ai_addrlen)<=0) perror("Failed to send!");
    else
    {
+      printf("The main server sent a request to server C.\n");
       memset(buffer,0,sizeof(buffer));
       if(recvfrom(sockfd,buffer,sizeof(buffer),0,C_addr->ai_addr,&(C_addr->ai_addrlen))<=0) perror("Receiving serverC error!");
       else
       {
+         printf("The main server received the feedback from server C using UDP over port %d.\n",atoi(port_server_C));
          latest=max(latest,atoi(buffer));
       }
    }
@@ -195,10 +210,10 @@ int TXCoins(string msg)
    {  //receive confirmation
       memset(buffer,0,sizeof(buffer));
       if(recvfrom(sockfd,buffer,sizeof(buffer),0,rand_addr->ai_addr,&(rand_addr->ai_addrlen))<=0) perror("Receiving random server error!");
-      else sender_balance=Check_Wallet(sender);
+      else sender_balance=Check_Wallet(sender,false);
    }
       
-   return sender_balance;
+   return make_pair(sender_balance,0);
 }
 
 void Add_to_record(char* data)
@@ -289,7 +304,7 @@ void Receive_stats(struct addrinfo *server_addr, string username)
 
 int Statistics(string user)
 {
-   if(Check_Wallet(user)<0) return -1; //user does not exist
+   if(Check_Wallet(user,false)<0) return -1; //user does not exist
    
    record.clear();
    Receive_stats(A_addr,user);
@@ -332,14 +347,10 @@ int Statistics(string user)
       record.push_back(t);
    }
    sort(record.begin(),record.end(),compare);
-   
-   sprintf(buffer,"%d",record.size());
-   printf("record size=%d\n",record.size());
 
    for(int i=0;i<record.size();i++)
    {
       t=record[i];
-      printf("%d %s %d %d\n",i+1,t.recver.c_str(),t.num,t.amount);
       sprintf(buffer,"%d %s %d %d ",i+1,t.recver.c_str(),t.num,t.amount);
       if(send(childfd,buffer,strlen(buffer),0)<=0) perror("Failed to send!");
    }  
@@ -347,32 +358,34 @@ int Statistics(string user)
    return 0; //success
 }
 
-void Backend(char* data)
+void Backend(char* data, struct sockaddr_in* client_addr)
 {
-  //printf("Received: %s\n",data);
-  //sprintf(data,"ServerM received message successfully");
-  
+  string client_name=(client_addr==&clientA_addr)?"A":"B";
   int operation=int(data[0]-'0');
   switch(operation)
   {
       case 1:     //CHECK WALLET
       {
          string name(data, 2, strlen(data)-2);
-         sprintf(data,"%d",Check_Wallet(name));
+         printf("The main server received input=%s from the client using TCP over port %d.\n",name.c_str(),client_addr->sin_port);
+         int n=Check_Wallet(name,true);
+         sprintf(data,"%d",n);
+         if(n<0) printf("Username was not found on database.\n");
+         else printf("The main server sent the current balance to client %s.\n",client_name.c_str());
          break;
       }
       case 2:     //TXCOINS
       {
          string message(data, 2, strlen(data)-2);
-         sprintf(data,"%d",TXCoins(message));
+         pair<int,int> p=TXCoins(message,client_addr->sin_port);
+         if(p.first==-2) sprintf(data,"%d %d",p.first,p.second);
+         else sprintf(data,"%d",p.first);
+         printf("The main server sent the result of the transaction to client %s.\n",client_name.c_str());
          break;
       }
       case 3:     //TXLIST
-      {
          TXLIST();
-         sprintf(data,"TXLIST Complete");
          break;
-      }
       case 4:     //stats
       {
          string name(data, 2, strlen(data)-2);
@@ -479,9 +492,6 @@ int main(int argc,char *argv[])
 
   fdmax = max(listenfd_A, listenfd_B); // keep track of the biggest file descriptor
 
-  int  socklen=sizeof(struct sockaddr_in);
-  struct sockaddr_in clientA_addr, clientB_addr;  // address information of client socket
-
   while(1)
   {
     read_fds=master;
@@ -500,7 +510,9 @@ int main(int argc,char *argv[])
         else
         {
           childfd=childfd_A;
-          Backend(buffer);
+          char c=buffer[0];
+          Backend(buffer,&clientA_addr);
+          if(c=='3') continue;
           if (send(childfd_A,buffer,strlen(buffer),0)<=0)
           {
             perror("Failed to send!");
@@ -520,7 +532,9 @@ int main(int argc,char *argv[])
         else
         {
           childfd=childfd_B;
-          Backend(buffer);
+          char c=buffer[0];
+          Backend(buffer,&clientB_addr);
+          if(c=='3') continue;
           if (send(childfd_B,buffer,strlen(buffer),0)<=0)
           {
             perror("Failed to send!");

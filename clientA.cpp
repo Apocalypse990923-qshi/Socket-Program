@@ -18,12 +18,7 @@ using namespace std;
 
 void Statistics(string msg)
 {
-   if(msg=="-1")
-   {
-      printf("no statistics results of username\n");
-      return;  
-   }
-   else if(msg=="0") return;
+   if(msg=="0") return;
    
    int i=0;
    for(;i<msg.length();i++)
@@ -48,7 +43,7 @@ void Statistics(string msg)
       if(msg[i]==' ') break;
    }
    int amount=atoi(msg.substr(len_rank+recver.length()+len_num+3,i-len_rank-recver.length()-len_num-3).c_str());
-   printf("%d\t%s\t%d\t%d\n",rank,recver.c_str(),num,amount);
+   printf("%d %s %d %d\n",rank,recver.c_str(),num,amount);
    
    Statistics(msg.substr(i+1,msg.length()-i-1));
    return;
@@ -103,14 +98,7 @@ int main(int argc,char *argv[])
          perror("Failed to send!");
          return -1;
       }
-      
-      memset(buffer,0,sizeof(buffer));
-      if (recv(sockfd,buffer,sizeof(buffer),0)<=0) // receive message from serverM
-      {
-         perror("Receiving error!");
-         return -1;
-      }
-      printf("Received: %s\n", buffer);
+      printf("clientA sent a sorted list request to the main server.\n");
     }
     else    //CHECK WALLET: ./client <username1>
     {
@@ -128,7 +116,9 @@ int main(int argc,char *argv[])
          perror("Receiving error!");
          return -1;
       }
-      printf("Received: %s\n", buffer);
+      int n=atoi(buffer);
+      if(n<0) printf("Unable to proceed with the request as %s is not part of the network.\n",argv[1]);
+      else printf("The current balance of %s is : %d alicoins.\n",argv[1],n);
     }
   }
   else if (argc==3)  //./client <username> stats
@@ -139,6 +129,7 @@ int main(int argc,char *argv[])
          perror("Failed to send!");
          return -1;
       }
+      printf("%s sent a statistics enquiry request to the main server.\n",argv[1]);
       
       memset(buffer,0,sizeof(buffer));
       if(recv(sockfd,buffer,sizeof(buffer),0)<=0)
@@ -148,10 +139,14 @@ int main(int argc,char *argv[])
       }
       else
       {
-         printf("Received: %s\n",buffer);
-         printf("Rank\tUsername\tNumOfTrans\tAmount\n");
          string data(buffer);
-         Statistics(data);
+         if(data=="-1") printf("Unable to proceed with the request as %s is not part of the network.\n",argv[1]);
+         else
+         {
+            printf("%s statistics are the following.:\n",argv[1]);
+            printf("Rank--Username--NumofTransacions--Total\n");
+            Statistics(data);
+         }
       }
   }
   else if (argc==4) //TXCOINS: ./client <username2> <username1> <amount>
@@ -170,7 +165,28 @@ int main(int argc,char *argv[])
       perror("Receiving error!");
       return -1;
     }
-    printf("Received: %s\n", buffer);
+    int n=atoi(buffer);
+    if(n>=0) printf("%s successfully transferred %s alicoins to %s. The current balance of %s is : %d alicoins.\n",argv[1],argv[3],argv[2],argv[1],n);
+    else
+    {
+      switch(n)
+      {
+         case -1:
+            printf("Unable to proceed with the transaction as %s is not part of the network.\n",argv[1]);
+            break;
+         case -2:
+         {
+            string s(buffer, 3, strlen(buffer)-3);
+            printf("%s was unable to transfer %s alicoins to %s because of insufficient balance. The current balance of %s is : %s alicoins.\n",argv[1],argv[3],argv[2],argv[1],s.c_str());
+            break;
+         }
+         case -3:
+            printf("Unable to proceed with the transaction as %s is not part of the network.\n",argv[2]);
+            break;
+         case -4:
+            printf("Unable to proceed with the transaction as %s and %s are not part of the network.\n",argv[1],argv[2]);
+      }
+    }
   }
 
   // Close socket。
