@@ -511,7 +511,7 @@ int main(int argc,char *argv[])
         {
           childfd=childfd_A;
           char c=buffer[0];
-          Backend(buffer,&clientA_addr);
+          Backend(buffer,&clientA_addr);	//process the request	
           if(c=='3') continue;
           if (send(childfd_A,buffer,strlen(buffer),0)<=0)
           {
