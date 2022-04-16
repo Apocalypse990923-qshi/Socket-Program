@@ -11,6 +11,7 @@
 #include <arpa/inet.h>
 #include <sys/wait.h>
 #include <iostream>
+#include <iomanip>
 using namespace std;
 
 #define localhost "127.0.0.1"
@@ -43,7 +44,7 @@ void Statistics(string msg)
       if(msg[i]==' ') break;
    }
    int amount=atoi(msg.substr(len_rank+recver.length()+len_num+3,i-len_rank-recver.length()-len_num-3).c_str());
-   printf("%d %s %d %d\n",rank,recver.c_str(),num,amount);
+   cout<<setw(2)<<rank<<setw(10)<<recver<<setw(12)<<num<<setw(14)<<amount<<endl;
    
    Statistics(msg.substr(i+1,msg.length()-i-1));
    return;

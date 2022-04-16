@@ -9,9 +9,17 @@ port_number_serverM_UDP 24308
 port_number_serverM_TCP_A 25308
 port_number_serverM_TCP_B 26308
 
-In my project, all the functions including optinal part are implemented. 
+In my project, all the functions including optional part are implemented. 
 The project contains readme, makefile, and 6 cpp code files, which are serverM.cpp, serverA.cpp, serverB.cpp, serverC.cpp, clientA.cpp and clientB.cpp.
 Running "make all" will compile all the files and generate 6 executable file, which are serverM, serverA, serverB, serverC, clientA and clientB. And each of them does what they should do mentioned in the material, which results in supporting all the functions including Check_Wallet, TXCOINS, TXLIST and Statistics.
+
+I have to explain to you that in my program, during TXCOIN and Stats operations, backend servers A,B,C will print mutiple times of onscreen messages because serverM will send mutiple requests to them during TXCOIN and Stats operations.
+
+In TXCOIN, serverM will call Check_Wallet function twice to verify both sender and recver. If transaction succeed, then it will request for the latest serial number. Finally it will randomly choose from A,B,C to store the new entry. 
+Therefore, if transaction is unvalid, three backend servers will print two pairs of onscreen messages. If valid, two of them will print three pairs while the one which store the entry will print four pairs.
+
+In Stats, serverM will call Check_Wallet function to check if username exist. If valid, then it requests for all the transactions related to user.
+Therefore, if user not exist, backend servers will only print one pair of onscreen message. If user exist, they will print two pairs.
 
 The format of all the messages exchanged:
 

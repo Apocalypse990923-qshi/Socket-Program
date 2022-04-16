@@ -206,13 +206,8 @@ pair<int,int> TXCoins(string msg,int port)
    
    sprintf(buffer,"3 %d %s %s %d",latest+1,sender.c_str(),recver.c_str(),amount);
    if(sendto(sockfd,buffer,strlen(buffer),0,rand_addr->ai_addr,rand_addr->ai_addrlen)<=0) perror("Failed to send!");
-   else
-   {  //receive confirmation
-      memset(buffer,0,sizeof(buffer));
-      if(recvfrom(sockfd,buffer,sizeof(buffer),0,rand_addr->ai_addr,&(rand_addr->ai_addrlen))<=0) perror("Receiving random server error!");
-      else sender_balance=Check_Wallet(sender,false);
-   }
-      
+   
+   sender_balance-=amount;
    return make_pair(sender_balance,0);
 }
 

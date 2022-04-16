@@ -186,9 +186,6 @@ void Save(string msg)
       record.pop_back();
    }
    outfile.close();
-   
-   sprintf(buffer, "Log Saved");
-   if(sendto(sockfd,buffer,strlen(buffer),0,res->ai_addr,res->ai_addrlen)<=0) perror("Failed to send!");
 }
 
 void TXLIST()
@@ -280,7 +277,7 @@ int main(int argc,char *argv[])
             case 4:     //TXLIST
                TXLIST();
                break;
-            case 5:
+            case 5:		//Statistics
             {
                string name(buffer, 2, strlen(buffer)-2);
                Statistics(name);
