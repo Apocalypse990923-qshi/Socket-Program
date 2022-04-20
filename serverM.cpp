@@ -259,6 +259,7 @@ void Receive_list(struct addrinfo *server_addr)
 
 void TXLIST()
 {
+   printf("A TXLIST request has been received.\n");
    record.clear();
    Receive_list(A_addr);
    Receive_list(B_addr);
@@ -273,6 +274,7 @@ void TXLIST()
       record.pop_back();
    }
    outfile.close();
+   printf("The sorted file is up and ready.\n");
 }
 
 void Receive_stats(struct addrinfo *server_addr, string username)
@@ -383,6 +385,7 @@ void Backend(char* data, struct sockaddr_in* client_addr)
          break;
       case 4:     //stats
       {
+         printf("A STATS request has been received.\n");
          string name(data, 2, strlen(data)-2);
          sprintf(data,"%d",Statistics(name));
          break;

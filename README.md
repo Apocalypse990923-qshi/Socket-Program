@@ -42,7 +42,7 @@ backend server reply to serverM:
 		else:
 			total balance calculated from my record: "amount" (may be negative)
 	Reply for serial number: "number"
-	Reply for write new transaction: "Log Saved" (not necessary)
+	Reply for write new transaction: No reply
 	Reply for all transactions:
 		number of transactions: "n"
 		n pieces of transactions: "serial_num sender recver amount"
