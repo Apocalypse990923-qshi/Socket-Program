@@ -1,14 +1,16 @@
-# EE450-Socket-Program
+# Socket-Program
 Qiushi Xu
-USC ID:5862459308
 
-port_number_serverA_UDP 21308
-port_number_serverB_UDP 22308
-port_number_serverC_UDP 23308
-port_number_serverM_UDP 24308
-port_number_serverM_TCP_A 25308
-port_number_serverM_TCP_B 26308
+## Overview
+Establishing a simplified Network Topology which contains TCP connection between Clients
+and Main Server as well as UDP connection between Main Server and Back-end Servers.</p>
+Implementing the Storage and Distributed Processing of Cryptographic transactions on
+Back-end Servers.
 
+![image](https://github.com/Apocalypse990923-qshi/Socket-Program/assets/97980766/70aaee23-f619-467a-9ebc-d66f5cecc137)
+
+
+## Description
 In my project, all the functions including optional part are implemented. 
 The project contains readme, makefile, and 6 cpp code files, which are serverM.cpp, serverA.cpp, serverB.cpp, serverC.cpp, clientA.cpp and clientB.cpp.
 Running "make all" will compile all the files and generate 6 executable file, which are serverM, serverA, serverB, serverC, clientA and clientB. And each of them does what they should do mentioned in the material, which results in supporting all the functions including Check_Wallet, TXCOINS, TXLIST and Statistics.
